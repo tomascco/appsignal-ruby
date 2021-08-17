@@ -105,7 +105,6 @@ module Appsignal
           paths_report = Paths.new
           data[:paths] = paths_report.report
           print_paths_section(paths_report)
-          print_empty_line
 
           transmit_report_to_appsignal if send_report_to_appsignal?(options)
         end
@@ -327,6 +326,7 @@ module Appsignal
           puts "AppSignal library"
           data_section :library do
             save :language, "ruby"
+            puts_value "Language", "Ruby"
             puts_and_save :package_version, "Gem version", Appsignal::VERSION
             puts_and_save :agent_version, "Agent version", Appsignal::Extension.agent_version
             puts_and_save :extension_loaded, "Extension loaded", Appsignal.extension_loaded
@@ -399,6 +399,7 @@ module Appsignal
           puts "    Architecture: #{report["architecture"]}"
           puts "    Target: #{report["target"]}"
           puts "    Musl override: #{report["musl_override"]}"
+          puts "    Linux ARM override: #{report["linux_arm_override"]}"
           puts "    Library type: #{report["library_type"]}"
           puts "    Source: #{report["source"]}" if report["source"] != "remote"
           puts "    Dependencies: #{report["dependencies"]}"
@@ -416,7 +417,7 @@ module Appsignal
           rbconfig = RbConfig::CONFIG
           puts "Host information"
           data_section :host do
-            puts_and_save :architecture, "Architecture", rbconfig["host_cpu"]
+            puts_and_save :architecture, "Architecture", Appsignal::System.agent_architecture
 
             os_label = os = rbconfig["host_os"]
             os_label = "#{os} (Microsoft Windows is not supported.)" if Gem.win_platform?
@@ -573,9 +574,13 @@ module Appsignal
             "(file: #{ownership[:user]}:#{ownership[:uid]}, " \
             "process: #{process_user[:user]}:#{process_user[:uid]})"
           puts_value "Ownership?", owner, :level => 2
-          return unless path.key?(:content)
-          puts "    Contents (last 10 lines):"
-          puts path[:content].last(10)
+
+          if path.key?(:content)
+            puts "    Contents (last 10 lines):"
+            puts path[:content].last(10)
+          else
+            print_empty_line
+          end
         end
 
         def print_empty_line

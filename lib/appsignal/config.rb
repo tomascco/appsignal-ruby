@@ -23,7 +23,7 @@ module Appsignal
       :request_headers                => %w[
         HTTP_ACCEPT HTTP_ACCEPT_CHARSET HTTP_ACCEPT_ENCODING
         HTTP_ACCEPT_LANGUAGE HTTP_CACHE_CONTROL HTTP_CONNECTION
-        CONTENT_LENGTH PATH_INFO HTTP_RANGE
+        CONTENT_LENGTH _APPSIGNAL_FILTER_DATA_KEYSPATH_INFO HTTP_RANGE
         REQUEST_METHOD REQUEST_URI SERVER_NAME SERVER_PORT
         SERVER_PROTOCOL
       ],
@@ -294,6 +294,7 @@ module Appsignal
       ENV["_APPSIGNAL_TRANSACTION_DEBUG_MODE"]       = config_hash[:transaction_debug_mode].to_s
       ENV["_APPSIGNAL_SEND_ENVIRONMENT_METADATA"]    = config_hash[:send_environment_metadata].to_s
       ENV["_APPSIGNAL_FILTER_DATA_KEYS"]             = config_hash[:filter_data_keys].join(",")
+      ENV["_APPSIGNAL_ENABLE_STATSD"]                = "true"
       ENV["_APP_REVISION"]                           = config_hash[:revision].to_s
     end
 

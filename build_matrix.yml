@@ -11,49 +11,43 @@ semaphore: # Default `.semaphore/semaphore.yml` contents
   auto_cancel:
     running:
       # Ignore main AND develop branch as we want it to build all workflows
-      when: "branch != 'main' AND branch != 'develop'"
+      when: "branch != 'main' AND branch != 'develop' AND branch != 'diagnose-testing'"
 
   global_job_config:
     env_vars:
+      - name: RUNNING_IN_CI
+        value: "true"
       - name: _BUNDLER_CACHE
         value: "v2"
       - name: _GEMS_CACHE
         value: "v2"
-      - name: BUNDLE_PATH
-        value: "../.bundle/"
-      - name: RUNNING_IN_CI
-        value: "true"
-      - name: RAILS_ENV
-        value: "test"
-      - name: JRUBY_OPTS
-        value: ""
-      - name: COV
-        value: "1"
     prologue:
       commands:
         - checkout
         - rm -f $HOME/.rbenv/plugins/rbenv-gem-rehash/etc/rbenv.d/exec/~gem-rehash.bash
-        - sem-version ruby $RUBY_VERSION
-        - ./support/check_versions
-        - cache restore $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE)
-        - cache restore $_GEMS_CACHE-gems-$RUBY_VERSION-$(checksum $BUNDLE_GEMFILE)
-        - ./support/install_deps
-        - bundle config set clean 'true'
-        - ./support/bundler_wrapper install --jobs=3 --retry=3
-    epilogue:
-      on_pass:
-        commands:
-          - cache store $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE) .bundle
-          - cache store $_GEMS_CACHE-gems-$RUBY_VERSION-$(checksum $BUNDLE_GEMFILE) $HOME/.gem
-      on_fail:
-        commands:
-          - "[ -e ext/install.report ] && cat ext/install.report || echo 'No ext/install.report file found'"
-          - "[ -f ext/mkmf.log ] && cat ext/mkmf.log || echo 'No ext/mkmf.log file found'"
+        - |
+          if [ -n "$_C_VERSION" ]; then
+            sem-version c $_C_VERSION
+          else
+            echo Skipping C-lang install
+          fi
+        - |
+          if [ -n "$RUBY_VERSION" ]; then
+            sem-version ruby $RUBY_VERSION
+            ./support/check_versions
+          else
+            echo Skipping Ruby install
+          fi
 
   blocks:
     - name: Validation
       dependencies: []
       task:
+        prologue:
+          commands:
+            - cache restore $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE)
+            - cache restore $_GEMS_CACHE-gems-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE)
+            - ./support/bundler_wrapper install --jobs=3 --retry=3
         jobs:
         - name: Validate CI setup
           env_vars:
@@ -62,12 +56,22 @@ semaphore: # Default `.semaphore/semaphore.yml` contents
             - name: GEMSET
               value: no_dependencies
             - name: BUNDLE_GEMFILE
-              value: gemfiles/no_dependencies.gemfile
+              value: Gemfile
           commands:
             - ./support/bundler_wrapper exec rake build_matrix:semaphore:validate
-    - name: Linters
+        epilogue:
+          on_pass:
+            commands:
+              - cache store $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE) .bundle
+              - cache store $_GEMS_CACHE-gems-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE) $HOME/.gem
+    - name: Ruby linters
       dependencies: []
       task:
+        prologue:
+          commands:
+            - cache restore $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE)
+            - cache restore $_GEMS_CACHE-gems-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE)
+            - ./support/bundler_wrapper install --jobs=3 --retry=3
         jobs:
         - name: RuboCop
           env_vars:
@@ -76,11 +80,79 @@ semaphore: # Default `.semaphore/semaphore.yml` contents
             - name: GEMSET
               value: no_dependencies
             - name: BUNDLE_GEMFILE
-              value: gemfiles/no_dependencies.gemfile
+              value: Gemfile
           commands:
             - ./support/bundler_wrapper exec rubocop
+        epilogue:
+          on_pass:
+            commands:
+              - cache store $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE) .bundle
+              - cache store $_GEMS_CACHE-gems-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE) $HOME/.gem
+    - name: Other linters
+      dependencies: []
+      task:
+        jobs:
+        - name: Git Lint (Lintje)
+          env_vars:
+            - name: LINTJE_VERSION
+              value: 0.3.0
+          commands:
+            - script/install_lintje
+            - $HOME/bin/lintje $SEMAPHORE_GIT_COMMIT_RANGE
+    - name: Integration tests
+      dependencies:
+      - Validation
+      task:
+        prologue:
+          commands:
+            - cache restore $_BUNDLER_CACHE-bundler-$RUBY_VERSION-diagnose-$(checksum Gemfile)
+            - cache restore $_GEMS_CACHE-gems-$RUBY_VERSION-diagnose-$(checksum Gemfile)
+            - ./support/bundler_wrapper install --jobs=3 --retry=3
+            - ./support/bundler_wrapper exec rake extension:install
+            - git submodule init
+            - git submodule update
+        jobs:
+        - name: Diagnose
+          env_vars:
+            - name: RUBY_VERSION
+              value: 2.6.6
+            - name: LANGUAGE
+              value: ruby
+          commands:
+            - spec/integration/diagnose/bin/test
+        epilogue:
+          on_pass:
+            commands:
+              - cache store $_BUNDLER_CACHE-bundler-$RUBY_VERSION-diagnose-$(checksum Gemfile) .bundle
+              - cache store $_GEMS_CACHE-gems-$RUBY_VERSION-diagnose-$(checksum Gemfile) $HOME/.gem
 
 matrix:
+  env_vars: # Shared for all jobs in the build matrix
+    - name: BUNDLE_PATH
+      value: "../.bundle/"
+    - name: RAILS_ENV
+      value: "test"
+    - name: JRUBY_OPTS
+      value: ""
+    - name: COV
+      value: "1"
+  prologue: # Shared for all jobs in the build matrix
+    commands:
+      - cache restore $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE)
+      - cache restore $_GEMS_CACHE-gems-$RUBY_VERSION-$(checksum $BUNDLE_GEMFILE)
+      - ./support/install_deps
+      - bundle config set clean 'true'
+      - ./support/bundler_wrapper install --jobs=3 --retry=3
+  epilogue: # Shared for all jobs in the build matrix
+    on_pass:
+      commands:
+        - cache store $_BUNDLER_CACHE-bundler-$RUBY_VERSION-$GEMSET-$(checksum $BUNDLE_GEMFILE) .bundle
+        - cache store $_GEMS_CACHE-gems-$RUBY_VERSION-$(checksum $BUNDLE_GEMFILE) $HOME/.gem
+    on_fail:
+      commands:
+        - "[ -e ext/install.report ] && cat ext/install.report || echo 'No ext/install.report file found'"
+        - "[ -f ext/mkmf.log ] && cat ext/mkmf.log || echo 'No ext/mkmf.log file found'"
+
   defaults:
     rubygems: "latest"
     bundler: "latest"
@@ -88,6 +160,10 @@ matrix:
   gemsets: # By default all gems are tested
     none:
       - "no_dependencies"
+    old_rails:
+      - "no_dependencies"
+      - "rails-3.2"
+      - "rails-4.2"
     minimal:
       - "no_dependencies"
       - "rails-5.2"
@@ -97,6 +173,7 @@ matrix:
     - ruby: "2.0.0-p648"
       rubygems: "2.7.8"
       bundler: "1.17.3"
+      gems: "old_rails"
     - ruby: "2.1.10"
       rubygems: "2.7.8"
       bundler: "1.17.3"
@@ -112,75 +189,64 @@ matrix:
     - ruby: "2.5.8"
       gems: "minimal"
     - ruby: "2.6.6"
-    - ruby: "2.7.2"
-    - ruby: "3.0.0"
-    - ruby: "jruby-9.1.17.0"
+    - ruby: "2.7.3"
+    - ruby: "3.0.1"
+    - ruby: "jruby-9.2.19.0"
       gems: "minimal"
+      env_vars:
+        - name: "_C_VERSION"
+          value: "8"
   gems:
     - gem: "no_dependencies"
     - gem: "capistrano2"
     - gem: "capistrano3"
     - gem: "grape"
     - gem: "padrino"
-      exclude:
-        ruby:
-          - "2.0.0-p648"
     - gem: "que"
     - gem: "que_beta"
-      exclude:
-        ruby:
-          - "2.0.0-p648"
     - gem: "rails-3.2"
       bundler: "1.17.3"
       exclude:
         ruby:
           - "2.6.6"
-          - "2.7.2"
-          - "3.0.0"
+          - "2.7.3"
+          - "3.0.1"
     - gem: "rails-4.2"
       bundler: "1.17.3"
       exclude:
         ruby:
           - "2.6.6"
-          - "2.7.2"
-          - "3.0.0"
+          - "2.7.3"
+          - "3.0.1"
     - gem: "rails-5.0"
       exclude:
         ruby:
-          - "2.0.0-p648"
-          - "3.0.0"
+          - "3.0.1"
     - gem: "rails-5.1"
       exclude:
         ruby:
-          - "2.0.0-p648"
-          - "3.0.0"
+          - "3.0.1"
     - gem: "rails-5.2"
       exclude:
         ruby:
-          - "2.0.0-p648"
-          - "3.0.0"
+          - "3.0.1"
     - gem: "rails-6.0"
       exclude:
         ruby:
-          - "2.0.0-p648"
           - "2.1.10"
           - "2.2.10"
           - "2.3.8"
           - "2.4.10"
-          - "jruby-9.1.17.0"
     - gem: "resque-1"
       bundler: "1.17.3"
       exclude:
         ruby:
-          - "3.0.0"
+          - "3.0.1"
     - gem: "resque-2"
-      exclude:
-        ruby:
-          - "2.0.0-p648"
     - gem: "sequel"
     - gem: "sequel-435"
       exclude:
         ruby:
-          - "3.0.0"
+          - "3.0.1"
     - gem: "sinatra"
     - gem: "webmachine"

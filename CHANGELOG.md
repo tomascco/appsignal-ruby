@@ -1,6 +1,74 @@
-# Changelog
+# AppSignal for Ruby gem Changelog
 
-# 3.0.0
+## 3.0.12
+
+- [7f3af841](https://github.com/appsignal/appsignal-ruby/commit/7f3af8418f830a7384c10b309e1aeb8ee32c5742) patch - Bump agent to 0f40689
+  
+  - Add Apple Darwin ARM alias.
+  - Improve appsignal.h documentation.
+  - Improve transaction debug log for errors.
+  - Fix agent zombie/defunct issue on containers without process reaping.
+
+## 3.0.11
+
+- [8e3ec789](https://github.com/appsignal/appsignal-ruby/commit/8e3ec78943acf7c533c3703c3961e19c49dcd5aa) patch - Bump agent to v-891c6b0. Add experimental Apple Silicon M1 ARM64 build.
+
+## 3.0.10
+
+- [88f7d585](https://github.com/appsignal/appsignal-ruby/commit/88f7d5850f57777c98f56190dc35ff37eface542) patch - Bump agent to c2024bf with appsignal-agent diagnose timing issue fix when reading the report and improved filtering for HTTP request transmission logs.
+
+## 3.0.9
+
+- [44dd4bdc](https://github.com/appsignal/appsignal-ruby/commit/44dd4bdc824ec88337b75791c1870358a4aa274f) patch - Check Rails.backtrace_cleaner method before calling the method. This prevents a NoMethodError from being raised in some edge cases.
+
+## 3.0.8
+
+- [5f94712d](https://github.com/appsignal/appsignal-ruby/commit/5f94712d3406898f58bea133b8bf3578d6fbbe22) patch - Add the `APPSIGNAL_BUILD_FOR_LINUX_ARM` flag to allow users to enable the experimental Linux ARM build for 64-bit hosts. Usage: `export APPSIGNAL_BUILD_FOR_LINUX_ARM=1 bundle install`. Please be aware this is an experimental build. Please report any issue you may encounter at our [support email](mailto:support@appsignal.com).
+
+## 3.0.7
+
+- [27f9b178](https://github.com/appsignal/appsignal-ruby/commit/27f9b178c20006ee15e69bdf878f3a0c9975b1f4) patch - Bump agent to 6caf6d0. Replaces curl HTTP client and includes various other maintenance updates.
+- [665d883a](https://github.com/appsignal/appsignal-ruby/commit/665d883a529e5c14b28e73eeb3ae6410deb3e182) patch - Improve Puma plugin stats collection. Instead of starting the AppSignal gem in the main process we send the stats to the AppSignal agent directly using StatsD. This should improve compatibility with phased restarts. If you use `prune_bundler`, you will need to add AppSignal to the extra `extra_runtime_dependencies` list.
+  
+  ```
+  # config/puma.rb
+  plugin :appsignal
+  extra_runtime_dependencies ["appsignal"]
+  ```
+
+## 3.0.6
+
+- [d354d79b](https://github.com/appsignal/appsignal-ruby/commit/d354d79b293fd549e66cae60d805d1b1e9e9d2d8) patch - Add Excon integration. Track requests and responses from the Excon gem.
+- [4c32e818](https://github.com/appsignal/appsignal-ruby/commit/4c32e8180b797d7987c67b68720c6a5d22935333) patch - Support Redis eval statements better by showing the actual script that was performed. Instead of showing `eval ? ? ?` (for a script with 2 arguments), show `<script> ? ?`, where `<script>` is whatever script was sent to `Redis.new.eval("<script>")`.
+
+## 3.0.5
+
+- [4bddac36](https://github.com/appsignal/appsignal-ruby/commit/4bddac3618ccea03c165eec53cee90e222b68cd6) patch - Skip empty HTTP proxy config. When any of the HTTP proxy config returns an
+  empty string, skip this config. This fixes installation issues where an empty
+  String is used as a HTTP proxy, causing a RuntimeError upon installation.
+
+## 3.0.4
+
+- [6338e822](https://github.com/appsignal/appsignal-ruby/commit/6338e8227c674ea7bbe6f55cdfde784fa9f5048f) patch - Drop logger level to debug. Reduce the output on the "info" level and only show
+  these messages in debug mode. This should reduce the noise for users running
+  AppSignal with the STDOUT logger, such as is the default on Heroku.
+
+## 3.0.3
+- Fix deprecation message for set_error namespace argument. PR #712
+- Fix example code for Transaction#set_namespace method. PR #713
+- Fix extension fallbacks on extension installation failure, that caused
+- NoMethodErrors. PR #720
+- Bump agent to v-75e76ad. PR #721
+
+## 3.0.2
+- Fix error on Rails boot when `enable_frontend_error_catching` is `true`.
+  PR #711
+
+## 3.0.1
+- Fix error occurring on APPSIGNAL_DNS_SERVER environment variable option
+  parsing. PR #709
+
+## 3.0.0
 
 Please read our [upgrade from version 2 to 3 guide][upgrade3] before upgrading.
 
@@ -16,46 +84,46 @@ Please read our [upgrade from version 2 to 3 guide][upgrade3] before upgrading.
 - Add Sidekiq error handler. Report more Sidekiq errors that happen around job
   execution. PR #699
 
-# 2.11.9
+## 2.11.9
 - Fix and simplify Ruby method delegation for object method instrumentation in
   the different Ruby versions. PR #706
 
-# 2.11.8
+## 2.11.8
 - Mark minutely probe thread as fork-safe by @pixeltrix. PR #704
 
-# 2.11.7
+## 2.11.7
 - Fix ActionCable integration in test environment using `stub_connection`.
   PR #705
 
-# 2.11.6
+## 2.11.6
 - Prepend Sidekiq middleware to wrap all Sidekiq middleware. Catches more
   errors and provide more complete performance measurements. PR #698
 
-# 2.11.5
+## 2.11.5
 - Add more detailed logging to finish_event calls when the event is unknown, so
   we know what event is being tried to finish. Commit
   c888a04d1b9ac947652b29c111c650fb5a5cf71c
 
-# 2.11.4
+## 2.11.4
 - Support Ruby 3.0 for Object method instrumentation with keyword arguments
   (https://docs.appsignal.com/ruby/instrumentation/method-instrumentation.html)
   PR #693
 
-# 2.11.3
+## 2.11.3
 - Support Shoryuken batch workers. PR #687
 
-# 2.11.2
+## 2.11.2
 - Support Ruby 3.0. PR #681
 - Support breadcrumbs. PR #666
 - Log Ruby errors on extension download. PR #679
 - Fix Ruby 1.9 build. PR #680
 
-# 2.11.1
+## 2.11.1
 - Support AS notifications instrumenters that use `start` and `finish`.
 - Updated agent with better logging and an IO stats fix.
 - ActionMailer magic dashboard
 
-# 2.11.0
+## 2.11.0
 - Track queue time regardless of namespace. Support custom namespaces. PR #602
 - Improve deprecation message from frontend error middleware. PR #620
 - Report Ruby environment metadata. PR #621, #627, #619, #618
@@ -82,20 +150,20 @@ Please read our [upgrade from version 2 to 3 guide][upgrade3] before upgrading.
 - Update AuthCheck class to use DeprecationMessage helper. PR #649
 - Print extension load error when AppSignal is loaded. PR #651
 
-# 2.10.12
+## 2.10.12
 - Fix `working_directory_path` config option loaded from environment variables.
   PR #653
 
-# 2.10.11
+## 2.10.11
 - Fix extension install report status output in `appsignal diagnose`. PR #636
 - Support setting a specific configuration file to load with the
   `Appsignal::Config` initializer. PR #638
 
-# 2.10.10
+## 2.10.10
 - Bump agent to v-4548c88. PR #634
   - Fix issue with host metrics values being reported as "Infinity".
 
-# 2.10.9
+## 2.10.9
 - Use http proxy if configured when downloading agent. PR #606
 - Clear event details cache every 48 hours.
   Commit eb5e899db69fcd7cfa221567bfd6ac04f2654c9c

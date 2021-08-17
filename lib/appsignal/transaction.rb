@@ -90,7 +90,7 @@ module Appsignal
         @transaction_id,
         @namespace,
         self.class.garbage_collection_profiler.total_time
-      )
+      ) || Appsignal::Extension::MockTransaction.new
     end
 
     def nil_transaction?
@@ -228,7 +228,7 @@ module Appsignal
     # "Web" and "background_job" gets transformed to "Background".
     #
     # @example
-    #   transaction.set_action("admin")
+    #   transaction.set_namespace("background")
     #
     # @param namespace [String] namespace name to use for this transaction.
     # @return [void]
@@ -526,7 +526,7 @@ module Appsignal
     end
 
     def cleaned_backtrace(backtrace)
-      if defined?(::Rails) && backtrace
+      if defined?(::Rails) && Rails.respond_to?(:backtrace_cleaner) && backtrace
         ::Rails.backtrace_cleaner.clean(backtrace, nil)
       else
         backtrace

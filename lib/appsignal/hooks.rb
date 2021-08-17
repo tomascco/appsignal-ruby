@@ -32,7 +32,7 @@ module Appsignal
         return unless dependencies_present?
         return if installed?
 
-        Appsignal.logger.info("Installing #{name} hook")
+        Appsignal.logger.debug("Installing #{name} hook")
         begin
           install
           @installed = true
@@ -108,3 +108,4 @@ require "appsignal/hooks/mongo_ruby_driver"
 require "appsignal/hooks/webmachine"
 require "appsignal/hooks/data_mapper"
 require "appsignal/hooks/que"
+require "appsignal/hooks/excon"

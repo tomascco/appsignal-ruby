@@ -115,6 +115,7 @@ describe Appsignal::CLI::Diagnose, :api_stub => true, :send_report => :yes_cli_i
     it "logs to the log file" do
       run
       log_contents = File.read(config.log_file_path)
+      p log_contents
       expect(log_contents).to contains_log :info, "Starting AppSignal diagnose"
     end
 
@@ -269,9 +270,10 @@ describe Appsignal::CLI::Diagnose, :api_stub => true, :send_report => :yes_cli_i
           "build" => {
             "time" => kind_of(String),
             "package_path" => File.expand_path("../../../../../", __FILE__),
-            "architecture" => rbconfig["host_cpu"],
+            "architecture" => Appsignal::System.agent_architecture,
             "target" => Appsignal::System.agent_platform,
             "musl_override" => false,
+            "linux_arm_override" => false,
             "library_type" => jruby ? "dynamic" : "static",
             "source" => "remote",
             "dependencies" => kind_of(Hash),
@@ -300,9 +302,10 @@ describe Appsignal::CLI::Diagnose, :api_stub => true, :send_report => :yes_cli_i
           "  Checksum: verified",
           "Build details",
           "  Install time: 20",
-          "  Architecture: #{rbconfig["host_cpu"]}",
+          "  Architecture: #{Appsignal::System.agent_architecture}",
           "  Target: #{Appsignal::System.agent_platform}",
           "  Musl override: false",
+          "  Linux ARM override: false",
           "  Library type: #{jruby ? "dynamic" : "static"}",
           "  Dependencies: {",
           "  Flags: {",

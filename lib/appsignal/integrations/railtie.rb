@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Appsignal.logger.info("Loading Rails (#{Rails.version}) integration")
+Appsignal.logger.debug("Loading Rails (#{Rails.version}) integration")
 
 require "appsignal/utils/rails_helper"
 require "appsignal/rack/rails_instrumentation"
@@ -29,10 +29,6 @@ module Appsignal
           ActionDispatch::DebugExceptions,
           Appsignal::Rack::RailsInstrumentation
         )
-
-        if Appsignal.config[:enable_frontend_error_catching]
-          app.middleware.insert_before(Appsignal::Rack::RailsInstrumentation)
-        end
 
         Appsignal.start
       end
