@@ -24,7 +24,7 @@ module Appsignal
   class Extension
     class << self
       def agent_config
-        @agent_config ||= YAML.load(
+        @agent_config ||= YAML.safe_load(
           File.read(File.join(File.dirname(__FILE__), "../../ext/agent.yml"))
         )
       end

@@ -55,15 +55,6 @@ Naming/AccessorMethodName:
     - 'lib/appsignal/helpers/instrumentation.rb'
     - 'lib/appsignal/transaction.rb'
 
-# Offense count: 4
-# Cop supports --auto-correct.
-Security/YAMLLoad:
-  Exclude:
-    - 'ext/base.rb'
-    - 'lib/appsignal/config.rb'
-    - 'lib/appsignal/extension.rb'
-    - 'lib/appsignal/integrations/sidekiq.rb'
-
 # Offense count: 20
 # Cop supports --auto-correct.
 # Configuration parameters: EnforcedStyle, SupportedStyles.
