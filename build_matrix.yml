@@ -33,7 +33,16 @@ semaphore: # Default `.semaphore/semaphore.yml` contents
           fi
         - |
           if [ -n "$RUBY_VERSION" ]; then
-            sem-version ruby $RUBY_VERSION
+            if ! (sem-version ruby "$RUBY_VERSION"); then
+              ruby_key="rbenv-ruby-$RUBY_VERSION"
+              echo "Attempting to build Ruby $RUBY_VERSION from source"
+              git -C "$HOME/.rbenv/plugins/ruby-build" pull
+              cache restore "$ruby_key"
+              sem-version ruby "$RUBY_VERSION"
+              if ! cache has_key "$ruby_key"; then
+                cache store "$ruby_key" "$HOME/.rbenv/versions/$RUBY_VERSION"
+              fi
+            fi
             ./support/check_versions
           else
             echo Skipping Ruby install
@@ -190,6 +199,7 @@ matrix:
     - ruby: "2.7.5"
     - ruby: "3.0.3"
     - ruby: "3.1.0"
+    - ruby: "3.2.0-preview1"
     - ruby: "jruby-9.2.19.0"
       gems: "minimal"
       env_vars:
@@ -211,6 +221,7 @@ matrix:
           - "2.7.5"
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "rails-4.2"
       bundler: "1.17.3"
       exclude:
@@ -219,21 +230,25 @@ matrix:
           - "2.7.5"
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "rails-5.0"
       exclude:
         ruby:
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "rails-5.1"
       exclude:
         ruby:
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "rails-5.2"
       exclude:
         ruby:
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "rails-6.0"
       exclude:
         ruby:
@@ -242,6 +257,7 @@ matrix:
           - "2.3.8"
           - "2.4.10"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "rails-6.1"
       exclude:
         ruby:
@@ -265,6 +281,7 @@ matrix:
         ruby:
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "resque-2"
     - gem: "sequel"
     - gem: "sequel-435"
@@ -272,5 +289,6 @@ matrix:
         ruby:
           - "3.0.3"
           - "3.1.0"
+          - "3.2.0-preview1"
     - gem: "sinatra"
     - gem: "webmachine"
